@@ -114,6 +114,9 @@ class PartialDependence(BaseGlobalInterpretation):
         the partial partial_dependence of the predict_fn with respect to the variables
         passed.
 
+        Note: The computation speed is optimized using multiprocessing using pathos
+              Reference: http://trac.mystic.cacr.caltech.edu/project/pathos
+
         Parameters:
         -----------
         feature_ids(list):
