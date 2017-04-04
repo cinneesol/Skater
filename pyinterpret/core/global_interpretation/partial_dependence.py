@@ -9,6 +9,8 @@ from matplotlib.ticker import ScalarFormatter
 from pathos.multiprocessing import ProcessingPool as Pool
 from matplotlib.axes._subplots import Axes as mpl_axes
 from matplotlib import cm
+from functools import partial
+import dill
 
 from .base import BaseGlobalInterpretation
 from ...util import exceptions
@@ -17,6 +19,12 @@ from ...util.plotting import COLORS, ColorMap, coordinate_gradients_to_1d_colors
 
 plt.rcParams['figure.autolayout'] = True
 
+def return_partial_operator(*args, **kwargs):
+    return partial(_compute_pd,*args, **kwargs)
+
+def parallel_helper(obj, methodname, *args, **kwargs):
+    """Helper to workaround Python 2 limitations of pickling instance methods"""
+    return getattr(obj, methodname)(*args, **kwargs)
 
 def _compute_pd(index, estimator_fn, grid_expanded, number_of_classes, feature_ids, input_data):
     """ Helper function to compute partial dependence for each grid value
@@ -71,6 +79,12 @@ def _compute_pd(index, estimator_fn, grid_expanded, number_of_classes, feature_i
             # this line is currently redundant, as in it gets executed multiple times
             pd_dict['sd'] = std_prediction[class_i]
     return pd_dict
+
+
+import copy_reg
+import types
+
+copy_reg.pickle(types.MethodType, _compute_pd)
 
 
 class PartialDependence(BaseGlobalInterpretation):
@@ -264,17 +278,20 @@ class PartialDependence(BaseGlobalInterpretation):
             raise exceptions.MalformedGridError(empty_grid_expanded_err_msg)
 
         n_classes = self._predict_fn.n_classes
-        pd_list = []
+
         import functools
-        executor_instance = Pool(n_jobs) if n_jobs > 0 else Pool()
-        for pd_row in executor_instance.map(functools.partial(_compute_pd, estimator_fn=predict_fn,
-                                                              grid_expanded=grid_expanded, number_of_classes=n_classes,
-                                                              feature_ids=feature_ids, input_data=data_sample),
-                                            [i for i in range(grid_expanded.shape[0])]):
-            pd_list.append(pd_row)
+        pool = Pool(n_jobs) if n_jobs > 0 else Pool()
+
+        arg_list = [i for i in range(grid_expanded.shape[0])]
+        operator = partial(_compute_pd, estimator_fn=predict_fn,
+                           grid_expanded=grid_expanded,
+                           number_of_classes=n_classes,
+                           feature_ids=feature_ids,
+                           input_data=data_sample)
+        pd_list = pool.map(operator, arg_list)
+
         self.build_pd_meta_dict()
         return pd.DataFrame(pd_list)
-
 
     def plot_partial_dependence(self, feature_ids, predict_fn, class_id=None,
                                 grid=None, grid_resolution=100,
