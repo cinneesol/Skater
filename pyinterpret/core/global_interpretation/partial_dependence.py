@@ -267,12 +267,16 @@ class PartialDependence(BaseGlobalInterpretation):
         pd_list = []
         import functools
         executor_instance = Pool(n_jobs) if n_jobs > 0 else Pool()
-        for pd_row in executor_instance.map(functools.partial(_compute_pd, estimator_fn=predict_fn,
-                                                              grid_expanded=grid_expanded, number_of_classes=n_classes,
-                                                              feature_ids=feature_ids, input_data=data_sample),
-                                            [i for i in range(grid_expanded.shape[0])]):
-            pd_list.append(pd_row)
-        self.build_pd_meta_dict()
+        try:
+            for pd_row in executor_instance.amap(functools.partial(_compute_pd, estimator_fn=predict_fn,
+                                                                   grid_expanded=grid_expanded, number_of_classes=n_classes,
+                                                                   feature_ids=feature_ids, input_data=data_sample),
+                                                                   [i for i in range(grid_expanded.shape[0])]):
+                                                                   pd_list.append(pd_row)
+            self.build_pd_meta_dict()
+        finally:
+            executor_instance.close()
+            executor_instance.join()
         return pd.DataFrame(pd_list)
 
 
@@ -391,8 +395,7 @@ class PartialDependence(BaseGlobalInterpretation):
         elif n_features == 2:
             feature1, feature2 = val_columns
             return self._3d_pdp_plot(pdp, feature1, feature2, self._pdp_metadata,
-                                                   with_variance=with_variance,
-                                                   plot_title=plot_title)
+                                     with_variance=with_variance, plot_title=plot_title)
 
 
     def _2d_pdp_plot(self, pdp, feature_name, pdp_metadata,
@@ -595,13 +598,11 @@ class PartialDependence(BaseGlobalInterpretation):
                     upper_plane = yerr + plot_data[binary2_value].values
                     lower_plane = plot_data[binary2_value].values - yerr
                     ax.fill_between(binary1_values, lower_plane, upper_plane,
-                                    color=color,alpha=.2)
+                                    color=color, alpha=.2)
             figure_list.append(f)
             axis_list.append(ax)
             ax.set_xlabel(feature1)
             ax.set_ylabel("Predicted {}".format(class_name))
-            #ax.get
-
         return flatten([figure_list, axis_list])
 
     def _plot_2d_1_binary_feature_and_1_continuous(self, pdp, binary_feature,
