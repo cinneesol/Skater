@@ -278,8 +278,12 @@ class PartialDependence(BaseGlobalInterpretation):
                                                                    pd_list.append(pd_row)
             self.build_pd_meta_dict()
         finally:
-            executor_instance.close()
-            executor_instance.join()
+            # This will come handy, when there is a certain interrupt from the parent process.
+            # e.g. an interrupt from the IPython notebook
+            # When such an interrupt happens, the launched sub-process get left behind as zombie process.
+            # Terminate is not the idealistic way to kill those processes, but from the brief experimentation. We
+            # will need a better way to solve it
+            executor_instance.terminate()
         return pd.DataFrame(pd_list)
 
 
