@@ -82,7 +82,7 @@ class PartialDependence(BaseGlobalInterpretation):
     _predict_fn = None
 
     @staticmethod
-    def _build_fresh_metadata_dict():
+    def _build_metadata_dict():
         return {
             'pdp_cols': {},
             'sd_col':'',
@@ -218,7 +218,7 @@ class PartialDependence(BaseGlobalInterpretation):
                 raise exceptions.MalformedGridRangeError(err_msg)
 
         self._check_grid_range(grid_range)
-        self._pdp_metadata = self._build_fresh_metadata_dict()
+        self._pdp_metadata = self._build_metadata_dict()
         self._pdp_metadata['val_cols'] = ['val_{}'.format(i) for i in feature_ids]
 
         # if you dont pass a grid, build one.
@@ -276,13 +276,15 @@ class PartialDependence(BaseGlobalInterpretation):
                                                                    feature_ids=feature_ids, input_data=data_sample),
                                                                    [i for i in range(grid_expanded.shape[0])]):
                                                                    pd_list.append(pd_row)
+            executor_instance.close()
+            executor_instance.join()
             self.build_pd_meta_dict()
         finally:
-            # This will come handy, when there is a certain interrupt from the parent process.
+            # This will come handy, when there is a sudden interrupt from the parent process.
             # e.g. an interrupt from the IPython notebook
             # When such an interrupt happens, the launched sub-process get left behind as zombie process.
-            # Terminate is not the idealistic way to kill those processes, but from the brief experimentation. We
-            # will need a better way to solve it
+            # Terminate is not the ideal way to resolve the state of the processes, but the last resort for
+            # now to kill all the child processes.
             executor_instance.terminate()
         return pd.DataFrame(pd_list)
 
