@@ -7,7 +7,7 @@ from .model import ModelType
 class DeployedModel(ModelType):
     """Model that gets predictions from a deployed model"""
     def __init__(self, uri, input_formatter, output_formatter,
-                 log_level=30, class_names=None, examples=None, feature_names=None):
+                 log_level=30, class_names=None, examples=None, feature_names=None, **kawrgs):
         """This model can be called by making http requests
         to the passed in uri.
 
@@ -42,6 +42,9 @@ class DeployedModel(ModelType):
                                             class_names=class_names,
                                             log_level=log_level,
                                             feature_names=feature_names)
+        self.headers = {}
+        self.headers['Authorization'] = kawrgs['Authorization']
+        self.headers['Content-Type'] = kawrgs['Content-Type']
 
 
     @staticmethod
@@ -55,7 +58,7 @@ class DeployedModel(ModelType):
 
 
     @staticmethod
-    def _predict(data, uri, input_formatter, output_formatter, formatter=None):
+    def _predict(data, uri, input_formatter, output_formatter, formatter=None, headers=None):
         """Static prediction function for multiprocessing usecases
 
         Parameters
@@ -86,7 +89,7 @@ class DeployedModel(ModelType):
         predictions: arraytype
         """
         query = input_formatter(data)
-        response = requests.post(uri, json=query)
+        response = requests.post(uri, headers=headers, json=query)
         results = output_formatter(response)
         if formatter:
             results = formatter(results)
@@ -113,5 +116,6 @@ class DeployedModel(ModelType):
                              uri=self.uri,
                              input_formatter=self.input_formatter,
                              output_formatter=self.output_formatter,
-                             formatter=self.formatter
+                             formatter=self.formatter,
+                             headers=self.headers
                              )
