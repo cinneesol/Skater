@@ -1,4 +1,4 @@
-"Specialized Exceptions for lynxes"
+"Specialized Exceptions for skate"
 
 
 def exception_factory(exception_name, base_exception=Exception, attributes=None):

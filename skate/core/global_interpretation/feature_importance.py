@@ -30,13 +30,13 @@ class FeatureImportance(BaseGlobalInterpretation):
         Parameters:
         -----------
 
-        modelinstance: lynxes.model.model.Model subtype
+        modelinstance: skate.model.model.Model subtype
             the machine learning model "prediction" function to explain, such that
             predictions = predict_fn(data).
 
             :Example:
-            >>> from lynxes.model import InMemoryModel
-            >>> from lynxes.core.explanations import Interpretation
+            >>> from skate.model import InMemoryModel
+            >>> from skate.core.explanations import Interpretation
             >>> from sklearn.ensemble import RandomForestClassier
             >>> rf = RandomForestClassier()
             >>> rf.fit(X,y)
@@ -94,13 +94,13 @@ class FeatureImportance(BaseGlobalInterpretation):
         Parameters:
         -----------
 
-        modelinstance: lynxes.model.model.Model subtype
+        modelinstance: skate.model.model.Model subtype
             the machine learning model "prediction" function to explain, such that
             predictions = predict_fn(data).
 
             For instance:
-            >>> from lynxes.model import InMemoryModel
-            >>> from lynxes.core.explanations import Interpretation
+            >>> from skate.model import InMemoryModel
+            >>> from skate.core.explanations import Interpretation
             >>> from sklearn.ensemble import RandomForestClassier
             >>> rf = RandomForestClassier()
             >>> rf.fit(X,y)

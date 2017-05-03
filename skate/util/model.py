@@ -10,9 +10,9 @@ def get_predictor(model):
 
     Parameters
     ----------
-    model: subtype of lynxes.model.model.Model
-        Either lynxes.model.remote.DeployedModel
-        or lynxes.model.local.InMemoryModel
+    model: subtype of skate.model.model.Model
+        Either skate.model.remote.DeployedModel
+        or skate.model.local.InMemoryModel
 
     Returns:
     ----------

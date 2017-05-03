@@ -23,7 +23,7 @@ install:
 - python -c "import numpy"
 - python -c "import lime"
 script:
-- "flake8 lynxes"
+- "flake8 skate"
 - ". run_test.sh"
 branches:
   only:

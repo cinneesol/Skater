@@ -8,12 +8,12 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn import datasets
 from functools import partial
 
-from lynxes.core.explanations import Interpretation
-from lynxes.util import exceptions
+from skate.core.explanations import Interpretation
+from skate.util import exceptions
 from arg_parser import create_parser
-from lynxes.model import InMemoryModel, DeployedModel
-from lynxes.util.data import MultiColumnLabelBinarizer
-from lynxes.core.global_interpretation.partial_dependence import PartialDependence
+from skate.model import InMemoryModel, DeployedModel
+from skate.util.data import MultiColumnLabelBinarizer
+from skate.core.global_interpretation.partial_dependence import PartialDependence
 
 class TestPartialDependence(unittest.TestCase):
 

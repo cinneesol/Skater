@@ -15,15 +15,15 @@ class Interpretation(object):
 
     Attributes:
     ----------
-    data_set: lynxes.data.DataSet
-        lynxes's data abstraction layer. All interactions with data goes through
+    data_set: skate.data.DataSet
+        skate's data abstraction layer. All interactions with data goes through
          this object.
 
-    local_interpreter: lynxes.core.local_interpreter.LocalInterpreter
+    local_interpreter: skate.core.local_interpreter.LocalInterpreter
         Contains methods for interpreting single prediction. Currently exposes the lime
         library.
 
-    global_interpreter: lynxes.core.global_interpreter.GlobalInterpreter
+    global_interpreter: skate.core.global_interpreter.GlobalInterpreter
         Contains methods for evaluating a model over entire regions of the domain. Currently
         exposes partial dependency
 
@@ -31,7 +31,7 @@ class Interpretation(object):
     Examples:
     ----------
 
-    from lynxes.core.explanations import Interpretation
+    from skate.core.explanations import Interpretation
     interpreter = Interpretation()
     interpreter.load_data(X, feature_ids = ['a','b'])
     interpreter.partial_dependence([feature_id1, feature_id2], regressor.predict)
@@ -108,7 +108,7 @@ class Interpretation(object):
 
         Returns
         ----------
-        annotated_model: lynxes.model.InMemoryModel
+        annotated_model: skate.model.InMemoryModel
         """
 
         if examples is None:

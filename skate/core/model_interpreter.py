@@ -25,7 +25,7 @@ class ModelInterpreter(object):
 
     def build_annotated_model(self, prediction_function, class_names=None, examples=None):
         """
-        returns lynxes.model.InMemoryModel
+        returns skate.model.InMemoryModel
         Parameters
         ----------
             prediction_function(callable):
