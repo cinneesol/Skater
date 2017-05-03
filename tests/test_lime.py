@@ -130,7 +130,7 @@ class TestLime(unittest.TestCase):
         vals = dict(explanation.as_list())
         keys = ['{} <= 0.00'.format(i) for i in [2, 1, 0]]
         lime_coefs = np.array([vals[key] for key in keys])
-        assert (abs(self.regressor.coef_ - lime_coefs) < error_epsilon).all()
+        self.assertTrue((abs(self.regressor.coef_ - lime_coefs) < error_epsilon).all(), True)
 
 
 

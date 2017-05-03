@@ -14,7 +14,6 @@ from arg_parser import arg_parse, create_parser
 class TestLocalInterpreter(unittest.TestCase):
 
     def setUp(self):
-
         self.parser = create_parser()
         args = self.parser.parse_args()
         debug = args.debug

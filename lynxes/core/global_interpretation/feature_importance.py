@@ -86,7 +86,7 @@ class FeatureImportance(BaseGlobalInterpretation):
         return importances
 
 
-    def plot_feature_importance(self, predict_fn, ax=None):
+    def plot_feature_importance(self, predict_fn, ascending=True, ax=None):
         """Computes feature importance of all features related to a model instance,
         then plots the results.
 
@@ -134,5 +134,5 @@ class FeatureImportance(BaseGlobalInterpretation):
 
         colors = cycle(COLORS)
         color = next(colors)
-        importances.sort_values().plot(kind='barh', ax=ax, color=color)
+        importances.sort_values(ascending=ascending).plot(kind='barh', ax=ax, color=color)
         return f, ax
