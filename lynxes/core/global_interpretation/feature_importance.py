@@ -34,6 +34,7 @@ class FeatureImportance(BaseGlobalInterpretation):
             predictions = predict_fn(data).
         ascending: boolean, default True
             Helps with ordering Ascending vs Descending
+        y_true: Target values, if available
 
         Returns
         -------
@@ -89,9 +90,9 @@ class FeatureImportance(BaseGlobalInterpretation):
         return importances
 
 
-    def plot_feature_importance(self, predict_fn, ascending=True, ax=None):
+    def plot_feature_importance(self, predict_fn, y_true=None, ascending=True, ax=None):
         """Computes feature importance of all features related to a model instance,
-        then plots the results.
+        then plots the results. Supports classification, multi-class classification, and regression.
 
 
         Parameters
@@ -99,6 +100,7 @@ class FeatureImportance(BaseGlobalInterpretation):
         predict_fn: lynxes.model.model.Model subtype
             estimator "prediction" function to explain the predictive model. Could be probability estimates
             or target values
+        y_true: Target values, if available
         ascending: boolean, default True
             Helps with ordering Ascending vs Descending
         ax: matplotlib.axes._subplots.AxesSubplot
@@ -116,10 +118,6 @@ class FeatureImportance(BaseGlobalInterpretation):
             >>> interpreter = Interpretation()
             >>> interpreter.load_data(X)
             >>> interpreter.feature_importance.plot_feature_importance(model, ascending=True, ax=ax)
-
-            Supports classification, multi-class classification, and regression.
-
-
             """
         try:
             global pyplot
@@ -129,7 +127,7 @@ class FeatureImportance(BaseGlobalInterpretation):
         except RuntimeError:
             raise (MatplotlibDisplayError("Matplotlib unable to open display"))
 
-        importances = self.feature_importance(predict_fn, ascending=ascending)
+        importances = self.feature_importance(predict_fn, ascending=ascending, y_true=y_true)
 
         if ax is None:
             f, ax = pyplot.subplots(1)
