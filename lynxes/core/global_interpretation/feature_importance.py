@@ -138,5 +138,8 @@ class FeatureImportance(BaseGlobalInterpretation):
 
         colors = cycle(COLORS)
         color = next(colors)
-        importances.plot(kind='barh', ax=ax, color=color)
+        # Below is a weirdness because of how pandas plot is behaving. There might be a better way
+        # to resolve the issuse of sorting based on axis
+        importances[::-1].plot(kind='barh', ax=ax, color=color) if ascending is True else \
+            importances.plot(kind='barh', ax=ax, color=color)
         return f, ax
