@@ -72,8 +72,12 @@ class TestFeatureImportance(unittest.TestCase):
 
 
     def test_feature_importance(self):
+        importances = self.interpreter.feature_importance.feature_importance(self.regressor_predict_fn, y_true=self.y)
+        self.assertEquals(np.isclose(importances.sum(), 1), True)
+
+        # If target label is not available as is the case of a deployed model
         importances = self.interpreter.feature_importance.feature_importance(self.regressor_predict_fn)
-        self.assertEquals(np.isclose(importances.sum(), 1), True) # default grid resolution is 100
+        self.assertEquals(np.isclose(importances.sum(), 1), True)
 
 
     def test_plot_feature_importance(self):

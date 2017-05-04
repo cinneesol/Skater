@@ -21,14 +21,15 @@ class FeatureImportance(BaseGlobalInterpretation):
         }
 
 
-    def feature_importance(self, modelinstance, ascending=True):
+    def feature_importance(self, model_instance, ascending=True, y_true=None):
 
         """
         Computes feature importance of all features related to a model instance.
+        Supports classification, multi-class classification, and regression.
 
-        Parameters:
-        -----------
-        modelinstance: lynxes.model.model.Model subtype
+        Parameters
+        ----------
+        model_instance: lynxes.model.model.Model subtype
             the machine learning model "prediction" function to explain, such that
             predictions = predict_fn(data).
         ascending: boolean, default True
@@ -38,28 +39,26 @@ class FeatureImportance(BaseGlobalInterpretation):
         -------
         importances : Sorted Series
 
-            :Example:
+
+        Examples
+        --------
             >>> from lynxes.model import InMemoryModel
             >>> from lynxes.core.explanations import Interpretation
             >>> from sklearn.ensemble import RandomForestClassier
             >>> rf = RandomForestClassier()
             >>> rf.fit(X,y)
-
-
             >>> model = InMemoryModel(rf, examples = X)
             >>> interpreter = Interpretation()
             >>> interpreter.load_data(X)
             >>> interpreter.feature_importance.feature_importance(model)
-
-            Supports classification, multi-class classification, and regression.
-
         """
 
         importances = {}
-        original_predictions = modelinstance.predict(self.data_set.data)
-
+        original_predictions = model_instance.predict(self.data_set.data) if y_true is None else y_true
         n = original_predictions.shape[0]
 
+        # import pdb
+        # pdb.set_trace()
         # instead of copying the whole dataset, should we copy a column, change column values,
         # revert column back to copy?
         copy_of_data_set = DataManager(self.data_set.data,
@@ -75,7 +74,7 @@ class FeatureImportance(BaseGlobalInterpretation):
             # feature_perturbations = self.data_set[feature_id] - copy_of_data_set[feature_id]
 
             # predict based on perturbed values
-            new_predictions = modelinstance.predict(copy_of_data_set.data)
+            new_predictions = model_instance.predict(copy_of_data_set.data)
 
             # evaluated entropy of scaled changes.
             changes_in_predictions = new_predictions - original_predictions
@@ -95,31 +94,32 @@ class FeatureImportance(BaseGlobalInterpretation):
         then plots the results.
 
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
+        predict_fn: lynxes.model.model.Model subtype
+            estimator "prediction" function to explain the predictive model. Could be probability estimates
+            or target values
+        ascending: boolean, default True
+            Helps with ordering Ascending vs Descending
+        ax: matplotlib.axes._subplots.AxesSubplot
+            existing subplot on which to plot feature importance. If none is provided,
+            one will be created.
 
-        modelinstance: lynxes.model.model.Model subtype
-            the machine learning model "prediction" function to explain, such that
-            predictions = predict_fn(data).
-
-            For instance:
+        Examples
+        --------
             >>> from lynxes.model import InMemoryModel
             >>> from lynxes.core.explanations import Interpretation
             >>> from sklearn.ensemble import RandomForestClassier
             >>> rf = RandomForestClassier()
             >>> rf.fit(X,y)
-
-
             >>> model = InMemoryModel(rf, examples = X)
             >>> interpreter = Interpretation()
             >>> interpreter.load_data(X)
-            >>> interpreter.feature_importance.feature_importance(model)
+            >>> interpreter.feature_importance.plot_feature_importance(model, ascending=True, ax=ax)
 
             Supports classification, multi-class classification, and regression.
 
-        ax: matplotlib.axes._subplots.AxesSubplot
-            existing subplot on which to plot feature importance. If none is provided,
-            one will be created.
+
             """
         try:
             global pyplot
