@@ -140,6 +140,8 @@ class FeatureImportance(BaseGlobalInterpretation):
         color = next(colors)
         # Below is a weirdness because of how pandas plot is behaving. There might be a better way
         # to resolve the issuse of sorting based on axis
-        importances.sort_values(ascending=False, inplace=True).plot(kind='barh', ax=ax, color=color) if ascending is True \
-            else importances.sort_values(ascending=True, inplace=True).plot(kind='barh', ax=ax, color=color)
+        if ascending is True:
+            importances.sort_values(ascending=False, inplace=True).plot(kind='barh', ax=ax, color=color)
+        else:
+            importances.plot(kind='barh', ax=ax, color=color)
         return f, ax
