@@ -143,5 +143,5 @@ class FeatureImportance(BaseGlobalInterpretation):
         if ascending is True:
             importances.sort_values(ascending=False).plot(kind='barh', ax=ax, color=color)
         else:
-            importances.sort_values(ascending=True).plot(kind='barh', ax=ax, color=color)
+            importances.sort_values(ascending=True).plot(ax=ax, color=color)
         return f, ax
