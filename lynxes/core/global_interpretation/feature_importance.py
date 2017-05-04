@@ -21,18 +21,22 @@ class FeatureImportance(BaseGlobalInterpretation):
         }
 
 
-    def feature_importance(self, modelinstance):
+    def feature_importance(self, modelinstance, ascending=True):
 
         """
         Computes feature importance of all features related to a model instance.
 
-
         Parameters:
         -----------
-
         modelinstance: lynxes.model.model.Model subtype
             the machine learning model "prediction" function to explain, such that
             predictions = predict_fn(data).
+        ascending: boolean, default True
+            Helps with ordering Ascending vs Descending
+
+        Returns
+        -------
+        importances : Sorted Series
 
             :Example:
             >>> from lynxes.model import InMemoryModel
@@ -81,7 +85,7 @@ class FeatureImportance(BaseGlobalInterpretation):
             # reset copy
             copy_of_data_set[feature_id] = self.data_set[feature_id]
 
-        importances = pd.Series(importances).sort_values()
+        importances = pd.Series(importances).sort_values(ascending=ascending)
         importances = importances / importances.sum()
         return importances
 
@@ -125,7 +129,7 @@ class FeatureImportance(BaseGlobalInterpretation):
         except RuntimeError:
             raise (MatplotlibDisplayError("Matplotlib unable to open display"))
 
-        importances = self.feature_importance(predict_fn)
+        importances = self.feature_importance(predict_fn, ascending=ascending)
 
         if ax is None:
             f, ax = pyplot.subplots(1)
@@ -134,5 +138,5 @@ class FeatureImportance(BaseGlobalInterpretation):
 
         colors = cycle(COLORS)
         color = next(colors)
-        importances.sort_values(ascending=ascending).plot(kind='barh', ax=ax, color=color)
+        importances.plot(kind='barh', ax=ax, color=color)
         return f, ax
