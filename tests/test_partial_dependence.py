@@ -189,7 +189,7 @@ class TestPartialDependence(unittest.TestCase):
         coefs = self.interpreter.partial_dependence.partial_dependence(self.features[:2],
                                                                        self.regressor_predict_fn,
                                                                        grid_resolution=10,
-                                                                       sample=True)
+                                                                       sample=True, n_jobs=1)
 
 
     def test_plot_1D_pdp(self):
