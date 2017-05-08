@@ -1,19 +1,30 @@
 """DataSet object"""
-
+from __future__ import division
 import numpy as np
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_distances
+import six
 
 from ..util.logger import build_logger
 from ..util import exceptions
 from ..util.static_types import StaticTypes
-from ..util.data import add_column_numpy_array
+from ..util.data import add_column_numpy_array, reconcile_bins_to_n_samples, flatten
 
 __all__ = ['DataManager']
 
 
 class DataManager(object):
     """Module for passing around data to interpretation objects"""
+
+    # Todo: we can probably remove some of the keys from data_info, and have properties
+    # executed as pure functions for easy to access metadata, such as n_rows, etc
+
+    __n_rows__ = 'n_rows'
+    __dim__ = 'dim'
+    __feature_info__ = 'feature_info'
+    __dtypes__ = 'dtypes'
+
+    __attribute_keys__ = [__n_rows__, __dim__, __feature_info__, __dtypes__]
 
     def __init__(self, data, feature_names=None, index=None, log_level=30):
         """
@@ -79,7 +90,7 @@ class DataManager(object):
                              "If you would like support for additional data structures let us "
                              "know!"))
 
-        self._get_metadata()
+        self.data_info = {attr: None for attr in self.__attribute_keys__}
 
     def generate_grid(self, feature_ids, grid_resolution=100, grid_range=(.05, .95)):
         """
@@ -123,7 +134,7 @@ class DataManager(object):
             raise(KeyError(err_msg))
 
         grid_range = [x * 100 for x in grid_range]
-        bins = np.linspace(*grid_range, num=grid_resolution)
+        bins = np.linspace(*grid_range, num=grid_resolution).tolist()
         grid = []
         for feature_id in feature_ids:
             data = self[feature_id]
@@ -141,26 +152,60 @@ class DataManager(object):
         self.logger.info('Generated grid of shape {}'.format(grid_shape))
         return grid
 
-    def _get_metadata(self):
-        n_rows = self.data.shape[0]
-        dim = self.data.shape[1]
-        self.n_rows = n_rows
-        self.dim = dim
+    def sync_metadata(self):
+        self.data_info[self.__n_rows__] = self._calculate_n_rows()
+        self.data_info[self.__dim__] = self._calculate_n_rows()
+        self.data_info[self.__dtypes__] = self._calculate_dtypes()
+        self.data_info[self.__feature_info__] = self._calculate_feature_info()
 
-        dtypes = pd.DataFrame(self.data, columns = self.feature_ids, index = self.index).dtypes
+    def _calculate_n_rows(self):
+        return self.data.shape[0]
 
-        self.feature_info = {}
+    def _calculate_dim(self):
+        return self.data.shape[1]
+
+    def _calculate_dtypes(self):
+        return pd.DataFrame(self.data, columns=self.feature_ids, index=self.index).dtypes
+
+    def _calculate_feature_info(self):
+        feature_info = {}
         for feature in self.feature_ids:
             x = self[feature]
-            self.feature_info[feature] = {
-                'type':dtypes.loc[feature],
-                'unique':len(np.unique(x)),
+            feature_info[feature] = {
+                'type': self.dtypes.loc[feature],
+                'unique': len(np.unique(x)),
                 'numeric': StaticTypes.data_types.is_dtype_numeric(x.dtype)
-                }
+            }
+        return feature_info
+
+
+    @property
+    def n_rows(self):
+        if self.data_info[self.__n_rows__] is None:
+            self.data_info[self.__n_rows__] = self._calculate_n_rows()
+        return self.data_info[self.__n_rows__]
+
+    @property
+    def dim(self):
+        if self.data_info[self.__dim__] is None:
+            self.data_info[self.__dim__] = self._calculate_dim()
+        return self.data_info[self.__dim__]
+
+    @property
+    def dtypes(self):
+        if self.data_info[self.__dtypes__] is None:
+            self.data_info[self.__dtypes__] = self._calculate_dtypes()
+        return self.data_info[self.__dtypes__]
+
+    @property
+    def feature_info(self):
+        if self.data_info[self.__feature_info__] is None:
+            self.data_info[self.__feature_info__] = self._calculate_feature_info()
+        return self.data_info[self.__feature_info__]
+
 
     def _build_metastore(self, bin_count):
 
-        self._get_metadata()
 
         medians = np.median(np.array(self.data), axis=0).reshape(1, self.dim)
 
@@ -188,26 +233,26 @@ class DataManager(object):
         }
 
     def __getitem__(self, key):
-        if self.data_type == pd.DataFrame:
+        if issubclass(self.data_type, pd.DataFrame):
             return self.__getitem_pandas__(key)
-        if self.data_type == np.ndarray:
+        elif issubclass(self.data_type, np.ndarray):
             return self.__getitem_ndarray__(key)
         else:
             raise ValueError("Can't get item for data of type {}".format(self.data_type))
 
     def __setitem__(self, key, newval):
-        if self.data_type == pd.DataFrame:
+        if issubclass(self.data_type, pd.DataFrame):
             self.__setcolumn_pandas__(key, newval)
-        if self.data_type == np.ndarray:
+        elif issubclass(self.data_type, np.ndarray):
             self.__setcolumn_ndarray__(key, newval)
         else:
             raise ValueError("Can't set item for data of type {}".format(self.data_type))
-        self._get_metadata()
+        self.sync_metadata()
 
     def __getrows__(self, idx):
         if self.data_type == pd.DataFrame:
             return self.__getrows_pandas__(idx)
-        if self.data_type == np.ndarray:
+        elif self.data_type == np.ndarray:
             return self.__getrows_ndarray__(idx)
         else:
             raise ValueError("Can't get rows for data of type {}".format(self.data_type))
@@ -218,7 +263,15 @@ class DataManager(object):
 
     def __getitem_ndarray__(self, i):
         """if you passed in a pandas dataframe, it has columns which are strings."""
-        idx = self.feature_ids.index(i)
+        if isinstance(i, (six.text_type, six.binary_type)) or StaticTypes.data_types.is_numeric(i):
+            idx = self.feature_ids.index(i)
+        elif hasattr(i, '__iter__'):
+            idx = [self.feature_ids.index(j) for j in i]
+        else:
+            raise(ValueError("Unrecongized index type: {}. This should not happen, "
+                             "submit a issue here: "
+                             "https://github.com/datascienceinc/model-interpretation/issues"
+                             .format(type(i))))
         return self.data[:, idx]
 
 
@@ -238,11 +291,12 @@ class DataManager(object):
 
     def __getrows_pandas__(self, idx):
         """if you passed in a pandas dataframe, it has columns which are strings."""
-        return self.data.iloc[idx]
+        return self.data.loc[idx]
 
 
     def __getrows_ndarray__(self, idx):
         """if you passed in a pandas dataframe, it has columns which are strings."""
+        idx = [self.index.index(i) for i in idx]
         return self.data[idx]
 
 
@@ -329,12 +383,13 @@ class DataManager(object):
         """
         if method == 'random-choice':
             return self._generate_column_sample_random_choice(feature_id, n_samples=n_samples)
-        else:
-            raise(NotImplementedError("Currenly we only support random-choice for column \
-                                       level sampling "))
+        elif method == 'stratified':
+            return self._generate_column_sample_stratified(feature_id, n_samples=n_samples)
+        else: raise(NotImplementedError("Currenly we only support random-choice, stratified for "
+                                        "column level sampling, not {} ".format(method)))
 
     def _generate_column_sample_random_choice(self, feature_id, n_samples=None):
-        return np.random.choice(self.__getitem__(feature_id), size=n_samples)
+        return np.random.choice(self[feature_id], size=n_samples)
 
     def _generate_column_sample_stratified(self, feature_id, n_samples=None):
         """
@@ -343,7 +398,17 @@ class DataManager(object):
         :param n_samples:
         :return:
         """
-        pass
+        bin_count, samples_per_bin = reconcile_bins_to_n_samples(n_samples)
+        percentiles = [100 *(i / bin_count) for i in range(bin_count+1)]
+
+        bins = list(np.percentile(self[feature_id], percentiles))
+        sample_windows = [(bins[i], bins[i + 1]) for i in range(len(bins) - 1)]
+
+        samples = []
+        for window, n in zip(sample_windows, samples_per_bin):
+            samples.append(np.random.uniform(window[0], window[1], size=n).tolist())
+
+        return np.array(flatten(samples))
 
     def _generate_column_sample_modeled(self, feature_id, n_samples=None):
         pass

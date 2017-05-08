@@ -7,6 +7,11 @@ from ...data import DataManager
 from .base import BaseGlobalInterpretation
 from ...util.plotting import COLORS
 from ...util.exceptions import *
+from ...model.model import ModelType
+
+
+def predict_wrapper(data, modelinstance, filter_classes):
+    return DataManager(modelinstance.predict(data), feature_names=modelinstance.target_names)[filter_classes]
 
 
 class FeatureImportance(BaseGlobalInterpretation):
@@ -21,8 +26,7 @@ class FeatureImportance(BaseGlobalInterpretation):
         }
 
 
-    def feature_importance(self, model_instance, ascending=True, y_true=None):
-
+    def feature_importance(self, model_instance, ascending=True, filter_classes=None, y_true=None):
         """
         Computes feature importance of all features related to a model instance.
         Supports classification, multi-class classification, and regression.
@@ -34,6 +38,9 @@ class FeatureImportance(BaseGlobalInterpretation):
             predictions = predict_fn(data).
         ascending: boolean, default True
             Helps with ordering Ascending vs Descending
+        filter_classes: array type
+            The classes to run partial dependence on. Default None invokes all classes.
+            Only used in classification models.
         y_true: Target values, if available
 
         Returns
@@ -54,12 +61,26 @@ class FeatureImportance(BaseGlobalInterpretation):
             >>> interpreter.feature_importance.feature_importance(model)
         """
 
+        if filter_classes:
+            assert all([i in modelinstance.target_names for i in filter_classes]), "members of filter classes must be" \
+                                                                                  "members of modelinstance.classes." \
+                                                                                  "Expected members of: " \
+                                                                                  "{0}\n" \
+                                                                                  "got: " \
+                                                                                  "{1}".format(modelinstance.target_names,
+                                                                                               filter_classes)
+
+        def predict_wrapper(predictions, filter_classes):
+            if filter_classes:
+                return ModelType._filter_outputs(predictions, modelinstance.target_names, filter_classes)
+            else:
+                return predictions
+
         importances = {}
-        original_predictions = model_instance.predict(self.data_set.data) if y_true is None else y_true
+        #original_predictions = model_instance.predict(self.data_set.data) if y_true is None else y_true
+        original_predictions = predict_wrapper(modelinstance.predict(self.data_set.data), filter_classes)
         n = original_predictions.shape[0]
 
-        # import pdb
-        # pdb.set_trace()
         # instead of copying the whole dataset, should we copy a column, change column values,
         # revert column back to copy?
         copy_of_data_set = DataManager(self.data_set.data,
@@ -68,14 +89,15 @@ class FeatureImportance(BaseGlobalInterpretation):
 
         for feature_id in self.data_set.feature_ids:
             # collect perturbations
-            samples = self.data_set.generate_column_sample(feature_id, n_samples=n, method='random-choice')
+            samples = self.data_set.generate_column_sample(feature_id, n_samples=n, method='stratified')
             copy_of_data_set[feature_id] = samples
 
             # get size of perturbations
             # feature_perturbations = self.data_set[feature_id] - copy_of_data_set[feature_id]
 
             # predict based on perturbed values
-            new_predictions = model_instance.predict(copy_of_data_set.data)
+            # new_predictions = model_instance.predict(copy_of_data_set.data)
+            new_predictions = predict_wrapper(modelinstance.predict(copy_of_data_set.data), filter_classes)
 
             # evaluated entropy of scaled changes.
             changes_in_predictions = new_predictions - original_predictions
@@ -90,7 +112,7 @@ class FeatureImportance(BaseGlobalInterpretation):
         return importances
 
 
-    def plot_feature_importance(self, predict_fn, y_true=None, ascending=True, ax=None):
+    def plot_feature_importance(self, predict_fn, filter_classes=None, y_true=None, ascending=True, ax=None):
         """Computes feature importance of all features related to a model instance,
         then plots the results. Supports classification, multi-class classification, and regression.
 
@@ -100,6 +122,9 @@ class FeatureImportance(BaseGlobalInterpretation):
         predict_fn: lynxes.model.model.Model subtype
             estimator "prediction" function to explain the predictive model. Could be probability estimates
             or target values
+        filter_classes: array type
+            The classes to run partial dependence on. Default None invokes all classes.
+            Only used in classification models.
         y_true: Target values, if available
         ascending: boolean, default True
             Helps with ordering Ascending vs Descending
@@ -127,7 +152,7 @@ class FeatureImportance(BaseGlobalInterpretation):
         except RuntimeError:
             raise (MatplotlibDisplayError("Matplotlib unable to open display"))
 
-        importances = self.feature_importance(predict_fn, ascending=ascending, y_true=y_true)
+        importances = self.feature_importance(predict_fn, filter_classes=filter_classes, ascending=ascending, y_true=y_true)
 
         if ax is None:
             f, ax = pyplot.subplots(1)
